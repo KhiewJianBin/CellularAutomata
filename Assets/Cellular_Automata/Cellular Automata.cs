@@ -41,6 +41,8 @@ public class CellularAutomata : MonoBehaviour
         }
     }
 
+    CellState? mouseCopy;
+
     void Update()
     {
         if (Input.GetMouseButton(0))
@@ -54,8 +56,15 @@ public class CellularAutomata : MonoBehaviour
             int j = (int)(worldMousePos.y);
 
             var cell = map[i, j];
-            cell.state = CellState.On;
+            
+            mouseCopy ??= cell.state == CellState.On ? CellState.Off : CellState.On;
+
+            cell.state = mouseCopy.Value;
             map[i, j] = cell;
+        }
+        else
+        {
+            mouseCopy = null;
         }
 
         if (playMode)
