@@ -9,8 +9,8 @@ public class CAGridMapScriptableObject : ScriptableObject
 
     public Cells this[int i, int j]
     {
-        get => grid2D[j * size + i];
-        set => grid2D[j * size + i] = value;
+        get => grid2D[i * size + j];
+        set => grid2D[i * size + j] = value;
     }
 
     public void Init(int size)
@@ -27,19 +27,29 @@ public class CAGridMapScriptableObject : ScriptableObject
         }
     }
 
-    public int CountNeighboursWithState(int idx, int idy, CellState state)
+    public int CountNeighboursWithState(int idx, int idy, CellState state, bool loop)
     {
         var count = 0;
         for (int i = -1; i < 2; i++)
         {
             for (int j = -1; j < 2; j++)
             {
-                var col = (idx + i + size) % size;
-                var row = (idy + j + size) % size;
-                count += grid2D[col * size + row].state == state ? 1 : 0;
+                var row = idx + i;
+                var col = idy + j;
+
+                if (loop)
+                {
+                    row = (row + size) % size;
+                    col = (col + size) % size;
+                }
+
+                if (row < 0 || row > size - 1) continue;
+                if (col < 0 || col > size - 1) continue;
+
+                count += grid2D[row * size + col].state == state ? 1 : 0;
             }
         }
-        count -= grid2D[idy * size + idx].state == state ? 1 : 0;
+        count -= grid2D[idx * size + idy].state == state ? 1 : 0;
         return count;
     }
 

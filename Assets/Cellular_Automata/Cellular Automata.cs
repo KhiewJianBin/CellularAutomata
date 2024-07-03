@@ -4,7 +4,7 @@ using static CAGridMapScriptableObject;
 
 public class CellularAutomata : MonoBehaviour
 {
-    readonly int size = 100;
+    readonly int size = 50;
 
     [Header("Scene")]
     [SerializeField] Camera cam;
@@ -19,6 +19,7 @@ public class CellularAutomata : MonoBehaviour
 
     [Header("Settings")]
     public float updateInterval = 0.2f;
+    public bool loop = false;
 
     // Vars
     float timer;
@@ -45,8 +46,12 @@ public class CellularAutomata : MonoBehaviour
         if (Input.GetMouseButton(0))
         {
             var worldMousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            int i = (int)Mathf.Clamp(worldMousePos.x, 0, size);
-            int j = (int)Mathf.Clamp(worldMousePos.y, 0, size);
+
+            if (worldMousePos.x < 0 || worldMousePos.x > size) return;
+            if (worldMousePos.y < 0 || worldMousePos.y > size) return;
+
+            int i = (int)(worldMousePos.x);
+            int j = (int)(worldMousePos.y);
 
             var cell = map[i, j];
             cell.state = CellState.On;
@@ -69,14 +74,14 @@ public class CellularAutomata : MonoBehaviour
                 for (int j = 0; j < size; j++)
                 {
                     var state = map[i, j].state;
-                    var On_neighbours = map.CountNeighboursWithState(i, j, CellState.On);
+                    var On_neighbours = map.CountNeighboursWithState(i, j, CellState.On, loop);
 
                     // Rules
                     if (state == CellState.Off && On_neighbours == 3)
                     {
                         nextgrid2D[i * size + j].state = CellState.On;
                     }
-                    else if (state == CellState.On && (On_neighbours < 2 || On_neighbours > 3))
+                    else if (state == CellState.On && (On_neighbours != 2 && On_neighbours != 3))
                     {
                         nextgrid2D[i * size + j].state = CellState.Off;
                     }
@@ -104,8 +109,8 @@ public class CellularAutomata : MonoBehaviour
 
         if (!cam) cam = Camera.main;
 
-        cam.transform.position = new Vector3(size / 2, size / 2, -10);
-        cam.orthographicSize = size / 2 * 1.1f;
+        cam.transform.position = new Vector3(size / 2f, size / 2f, -10);
+        cam.orthographicSize = size / 2f * 1.1f;
 
         var cellSize = Vector3.one;
 
