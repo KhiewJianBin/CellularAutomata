@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using static CAGridMapScriptableObject;
@@ -151,5 +152,12 @@ public class CellularAutomata : MonoBehaviour
             Gizmos.color = Color.black;
             Gizmos.DrawCube(center, cellSize);
         }
+    }
+
+    void OnDestroy()
+    {
+        EditorUtility.SetDirty(map);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
     }
 }
