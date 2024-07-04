@@ -31,7 +31,7 @@ struct GameOfLifeJob : IJobFor
         }
         else
         {
-            outputGrid[i * size + j]= new Cell { state = state };
+            outputGrid[i * size + j] = new Cell { state = state };
         }
     }
 

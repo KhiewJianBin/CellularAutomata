@@ -1,9 +1,10 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using static CAGridMapScriptableObject;
 
-public class CellularAutomata : MonoBehaviour
+public class CellularAutomataCompute : MonoBehaviour
 {
     readonly int size = 50;
 
@@ -18,6 +19,9 @@ public class CellularAutomata : MonoBehaviour
     [Header("Data")]
     [SerializeField] CAGridMapScriptableObject map;
 
+    [Header("System")]
+    [SerializeField] ComputeShader shader;
+
     [Header("Settings")]
     public float updateInterval = 0.2f;
     public bool loop = false;
@@ -28,6 +32,10 @@ public class CellularAutomata : MonoBehaviour
     Cell[] nextgrid2D;
     CellState? mouseCopy;
 
+    //Compute
+    ComputeBuffer gridBuffer;
+    ComputeBuffer nextgridBuffer;
+    int GOLKernelHandle;
     void Awake()
     {
         PlayPause_Toggle.onValueChanged.AddListener(OnEditRunChanged);
@@ -44,6 +52,13 @@ public class CellularAutomata : MonoBehaviour
         }
 
         nextgrid2D = new Cell[size * size];
+
+        // Init Compute
+        GOLKernelHandle = shader.FindKernel("GOL");
+
+        int stride = 1 * sizeof(int);
+        gridBuffer = new ComputeBuffer(size * size, stride);
+        nextgridBuffer = new ComputeBuffer(size * size, stride);
     }
 
     void Update()
@@ -59,7 +74,7 @@ public class CellularAutomata : MonoBehaviour
             int j = (int)(worldMousePos.y);
 
             var cell = map[i, j];
-            
+
             mouseCopy ??= cell.state == CellState.On ? CellState.Off : CellState.On;
 
             cell.state = mouseCopy.Value;
@@ -78,31 +93,20 @@ public class CellularAutomata : MonoBehaviour
 
             timer -= updateInterval;
 
-            //Update
-            for (int i = 0; i < size; i++)
-            {
-                for (int j = 0; j < size; j++)
-                {
-                    var state = map[i, j].state;
-                    var On_neighbours = map.CountNeighboursWithState(i, j, CellState.On, loop);
+            // Prep Data To Send To GPU
+            gridBuffer.SetData(map.grid2D);
+            shader.SetFloat("size", size);
+            shader.SetBool("loop", loop);
+            shader.SetBuffer(GOLKernelHandle, nameof(gridBuffer), gridBuffer);
+            shader.SetBuffer(GOLKernelHandle, nameof(nextgridBuffer), nextgridBuffer);
 
-                    // Rules
-                    if (state == CellState.Off && On_neighbours == 3)
-                    {
-                        nextgrid2D[i * size + j].state = CellState.On;
-                    }
-                    else if (state == CellState.On && (On_neighbours != 2 && On_neighbours != 3))
-                    {
-                        nextgrid2D[i * size + j].state = CellState.Off;
-                    }
-                    else
-                    {
-                        nextgrid2D[i * size + j].state = state;
-                    }
-                }
-            }
+            // Send to GPU
+            shader.Dispatch(GOLKernelHandle, size, size, 1);
 
-            for (int i = 0;i < nextgrid2D.Length; i++)
+            // Get From GPU
+            nextgridBuffer.GetData(nextgrid2D);
+
+            for (int i = 0; i < nextgrid2D.Length; i++)
             {
                 map.grid2D[i] = nextgrid2D[i];
             }
@@ -132,7 +136,7 @@ public class CellularAutomata : MonoBehaviour
             for (int j = 0; j < size; j++)
             {
                 var center = new Vector3(i, j, 0) + cellSize / 2;
-                var cell = map[i,j];
+                var cell = map[i, j];
 
                 if (cell.state == CellState.On)
                 {
@@ -159,6 +163,9 @@ public class CellularAutomata : MonoBehaviour
 
     void OnDestroy()
     {
+        gridBuffer.Dispose();
+        nextgridBuffer.Dispose();
+
         EditorUtility.SetDirty(map);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();

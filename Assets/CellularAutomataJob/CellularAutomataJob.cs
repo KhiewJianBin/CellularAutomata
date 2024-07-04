@@ -7,7 +7,7 @@ using static CAGridMapScriptableObject;
 
 public class CellularAutomataJob : MonoBehaviour
 {
-    readonly int size = 100;
+    readonly int size = 50;
 
     [Header("Scene")]
     [SerializeField] Camera cam;
