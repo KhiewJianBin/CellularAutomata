@@ -1,11 +1,13 @@
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using static CAGridMapScriptableObject;
 
-public class CellularAutomata : MonoBehaviour
+public class CellularAutomataJob : MonoBehaviour
 {
-    readonly int size = 50;
+    readonly int size = 100;
 
     [Header("Scene")]
     [SerializeField] Camera cam;
@@ -25,7 +27,6 @@ public class CellularAutomata : MonoBehaviour
     // Vars
     float timer;
     bool playMode = false;
-    Cell[] nextgrid2D;
     CellState? mouseCopy;
 
     void Awake()
@@ -42,8 +43,6 @@ public class CellularAutomata : MonoBehaviour
         {
             map.Clear(CellState.Off);
         }
-
-        nextgrid2D = new Cell[size * size];
     }
 
     void Update()
@@ -78,33 +77,53 @@ public class CellularAutomata : MonoBehaviour
 
             timer -= updateInterval;
 
-            //Update
-            for (int i = 0; i < size; i++)
-            {
-                for (int j = 0; j < size; j++)
-                {
-                    var state = map[i, j].state;
-                    var On_neighbours = map.CountNeighboursWithState(i, j, CellState.On, loop);
+            StartGOLJob(size, map.grid2D);
 
-                    // Rules
-                    if (state == CellState.Off && On_neighbours == 3)
-                    {
-                        nextgrid2D[i * size + j].state = CellState.On;
-                    }
-                    else if (state == CellState.On && (On_neighbours != 2 && On_neighbours != 3))
-                    {
-                        nextgrid2D[i * size + j].state = CellState.Off;
-                    }
-                    else
-                    {
-                        nextgrid2D[i * size + j].state = state;
-                    }
-                }
-            }
-
-            map.grid2D = nextgrid2D;
+            EndGOLJob(ref map.grid2D);
         }
     }
+
+    #region GameOfLifeJob Job
+    GameOfLifeJob gameOfLifeJob;
+    JobHandle sheduleParralelJobHandle;
+    NativeArray<Cell> inputGrid;
+    NativeArray<Cell> outputGrid;
+    void StartGOLJob(int size, Cell[] grid2D)
+    {
+        var sizesq = grid2D.Length;
+        inputGrid = new NativeArray<Cell>(sizesq, Allocator.Persistent);
+
+        for (int i = 0; i < sizesq; i++)
+        {
+            inputGrid[i] = grid2D[i];
+        }
+
+        outputGrid = new NativeArray<Cell>(sizesq, Allocator.Persistent);
+        gameOfLifeJob = new GameOfLifeJob()
+        {
+            size = size,
+            loop = loop,
+            inputGrid = inputGrid,
+            outputGrid = outputGrid
+        };
+
+        sheduleParralelJobHandle = gameOfLifeJob.ScheduleParallel(sizesq, 64, new JobHandle());
+    }
+    void EndGOLJob(ref Cell[] nextgrid2D)
+    {
+        sheduleParralelJobHandle.Complete();
+
+        //Extract out
+        for (int i = 0; i < gameOfLifeJob.outputGrid.Length; i++)
+        {
+            nextgrid2D[i] = gameOfLifeJob.outputGrid[i];
+        }
+
+        inputGrid.Dispose();
+        outputGrid.Dispose();
+    }
+    #endregion
+
 
     void OnDrawGizmos()
     {

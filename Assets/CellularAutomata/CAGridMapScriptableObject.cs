@@ -4,10 +4,10 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "CAGridMap", menuName = "CA/CAGridMap")]
 public class CAGridMapScriptableObject : ScriptableObject
 {
-    public Cells[] grid2D;
+    public Cell[] grid2D;
     public int size;
 
-    public Cells this[int i, int j]
+    public Cell this[int i, int j]
     {
         get => grid2D[i * size + j];
         set => grid2D[i * size + j] = value;
@@ -16,7 +16,7 @@ public class CAGridMapScriptableObject : ScriptableObject
     public void Init(int size)
     {   
         this.size = size;
-        grid2D = new Cells[size*size];
+        grid2D = new Cell[size*size];
     }
 
     public void Clear(CellState state)
@@ -56,7 +56,7 @@ public class CAGridMapScriptableObject : ScriptableObject
 
 
     [Serializable]
-    public struct Cells
+    public struct Cell
     {
         public CellState state;
     }
