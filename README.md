@@ -7,3 +7,14 @@ Conway's Game Of Life in Unity
 3. Adjustable update internal
 4. Grid loop
 5. 3 Versions, Normal, Jobs, Compute
+
+
+---------------
+
+# Boids
+
+##TODO
+Mouse Seek Behaviour
+ECS implementation
+compute implementation
+
